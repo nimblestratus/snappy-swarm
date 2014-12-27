@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# verify up-to-date
+
+sudo apt-get update
+sudo apt-get upgrade -y
+
+# add snappy tools
+sudo apt-add-repository ppa:snappy-dev/tools
+sudo apt-get update
+sudo apt-get -y install uvtool
+newgrp libvirtd
+
+# if we don't have a ssh-key then add it
+if [[ ! -f ~/.ssh/id_rsa.pub ]]; then
+   ssh-keygen
+fi
+
+# download the images
+uvt-simplestreams-libvirt sync --snappy flavor=core release=devel
+
+# install docker
+
+[ -e /usr/lib/apt/methods/https ] || {
+  apt-get update
+  apt-get install -y apt-transport-https
+}
+
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys
+sudo sh -c "echo deb https://get.docker.com/ubuntu docker main\
+> /etc/apt/sources.list.d/docker.list"
+sudo apt-get update
+sudo apt-get install -y lxc-docker
+
+# Setup User to not need to "sudo" when calling docker
+
+sudo groupadd docker
+sudo gpasswd -a ${USER} docker
+sudo service docker restart
+
