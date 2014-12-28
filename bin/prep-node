@@ -6,7 +6,7 @@ TOKEN=$2
 echo "Creating $node (this may take a little while)."
 uvt-kvm create --wait $node flavor=core
 
-echo "Installing snappy on $node"
+echo "Installing docker on $node"
 uvt-kvm ssh $node "snappy install docker"
 
 echo re-configuring the docker daemon to listen on a port
@@ -35,4 +35,4 @@ fi
 
 # register the node with the swarm
 
-uvt-kvm ssh $node "nohup '/home/ubuntu/snappy-bin/swarm.join --token ${TOKEN} --addr ${IP}:4243' &"
+uvt-kvm ssh $node "nohup /home/ubuntu/snappy-bin/swarm.join --token ${TOKEN} --addr ${IP}:4243 >/dev/null 2>&1 &"
