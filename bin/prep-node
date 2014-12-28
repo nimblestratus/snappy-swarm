@@ -3,33 +3,36 @@
 node=$1
 TOKEN=$2
 
+echo "Creating $node (this may take a little while)."
+uvt-kvm create --wait $node flavor=core
+
 echo "Installing snappy on $node"
-uvt-kvm ssh $node snappy install docker
+uvt-kvm ssh $node "snappy install docker"
 
 echo re-configuring the docker daemon to listen on a port
 
 IP=`uvt-kvm ip $node`
-version=`uvt-kvm ssh $node snappy-versions|grep docker|awk '{print $3}'`
-cfg="DOCKER_OPTIONS='-H tcp://${IP}:4243'"
-uvt-kvm ssh $node "echo $cfg >> /apps/docker/current/etc/docker.conf"
+version=`uvt-kvm ssh $node snappy versions|grep docker|awk '{print $3}'`
+cfg="DOCKER_OPTIONS=\'-H tcp://${IP}:4243\'"
+uvt-kvm ssh $node  "sudo sh -c \"echo $cfg >> /apps/docker/current/etc/docker.conf\""
 
 echo restarting docker daemon
-uvt-kvm ssh $node "sudo systemctl restart docker_docker_version_${version}.service
+uvt-kvm ssh $node "sudo systemctl restart docker_docker_${version}.service"
 
 echo installing swarm
-package=`uvt-kvm ssh $node snappy search swarm |awk '{print $1}'|head -1`
-uvt-kvm ssh $node snappy install $package
+package=`uvt-kvm ssh $node snappy search swarm |awk '{print $1}'|tail -1`
+uvt-kvm ssh $node "snappy install $package"
 
 # this is a hack to fix the current package
 
 if [[ "${package}" != "snappy" ]]; then
-    uvt-kvm ssh $node sudo "ln -s /apps/$package /apps/snappy"
-    for i in `uvt-kvm ssh $node ls snappy-bin|grep ${package}|sed -e "s/${package}//"` 
+    uvt-kvm ssh $node sudo "ln -s /apps/$package /apps/swarm"
+    for i in `uvt-kvm ssh $node ls snappy-bin|grep ${package}|sed -e "s/${package}.//"` 
     do 
-         uvt-kvm ssh $node "ln -s snappy-bin/${package}.${i} snappy-bin/swarm.${i}" 
+         uvt-kvm ssh $node "ln -s \${HOME}/snappy-bin/${package}.${i} \${HOME}/snappy-bin/swarm.${i}" 
     done
 fi
 
 # register the node with the swarm
 
-uvt-kvm ssh $node "swarm.join --token ${TOKEN} --addr ${IP}:4243"
+uvt-kvm ssh $node "nohup swarm.join --token ${TOKEN} --addr ${IP}:4243 &"
