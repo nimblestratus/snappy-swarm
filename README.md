@@ -11,6 +11,9 @@ added to the swarm.
 
 ## Preparing the Host
 
+> The `bin/prep-host` script will perform the steps listed below. The
+> steps are listed below with commentary for reference.
+
 This assumes a 64-bit server which is running Ubuntu 14.04. Verify
 that updates are installed:
 
@@ -29,7 +32,6 @@ that updates are installed:
     sudo apt-add-repository ppa:snappy-dev/tools
     sudo apt-get update
     sudo apt-get -y install uvtool
-    newgrp libvirtd
 ```
 
 2. If you don't have a `~/.ssh/id_rsa.pub` then:
@@ -50,30 +52,13 @@ We want a recent/new version of Docker, so we need to use a different
 set of repositories than the "default". These instructions follow the
 Docker on Ubuntu [installation instructions](https://docs.docker.com/installation/ubuntulinux/).
 
-1. Verify that `apt` can handle `https` urls (and fix it if it can't!)
+1. Do the "easy" install:
 
 ```
-    [ -e /usr/lib/apt/methods/https ] || {
-      apt-get update
-      apt-get install -y apt-transport-https
-    }
+    curl -sSL https://get.docker.com/ubuntu/ | sudo sh
 ```
 
-2. Add the Docker repository to your keychain
-
-```
-    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys
-```
-
-3. Add the Docker repositiory and install docker:
-
-```
-    sudo sh -c "echo deb https://get.docker.com/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
-    sudo apt-get update
-    sudo apt-get install -y lxc-docker
-```
-
-4. To eliminate the need to `sudo` every time you run `docker` do the
+2. To eliminate the need to `sudo` every time you run `docker` do the
    following:
 
 > Note: there is a potential security issue; see
@@ -86,4 +71,50 @@ Docker on Ubuntu [installation instructions](https://docs.docker.com/installatio
     sudo service docker restart
 ```
 
-5.
+5. Modify the Docker start script to bind to a port on the private
+   network in addition to the file socket:
+
+```
+   sudo service docker stop
+   sudo sh -c 'echo DOCKER_OPTS=\"-H tcp://192.168.122.1:4243 -H unix:///var/run/docker.sock\" >> /etc/default/docker'
+   sudo service docker start
+``` 
+
+### Install and Configure go
+
+1. Install the go binaries:
+
+```
+    sudo apt-get install -y golang-go golang-go.tools
+```
+
+2. Configure the environment.  We're going to set up some global
+   variables and ensure that they're loaded into subsequent shell
+   sessions:
+
+```
+	sudo sh -c "cat > /etc/profile.d/golang-env.sh" <<EOF
+	export GOROOT=/usr/share/go
+	export GOPATH=\${GOROOT}
+	export PATH=\${PATH}:\${GOROOT}/bin
+	EOF
+
+	. /etc/profile.d/golang-env.sh
+```
+
+### Install swarm
+
+We're installing it to the global position; in order to do this we
+need to "cheat" a little bit & specify an environmental variable to
+tell it where to install:
+
+```
+sudo GOPATH=$GOPATH go get -u github.com/docker/swarm
+```
+
+### Logout
+
+Logout and log back in to ensure all the environment settings are
+captured.
+
+## Prepare the swarm

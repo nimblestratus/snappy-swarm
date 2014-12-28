@@ -1,15 +1,18 @@
 #!/bin/bash
 
 # verify up-to-date
+echo Performing an apt-get upgrade to ensure software is up-to-date
 
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo apt-get -q update
+sudo apt-get -q upgrade -y
 
 # add snappy tools
-sudo apt-add-repository ppa:snappy-dev/tools
-sudo apt-get update
-sudo apt-get -y install uvtool
-newgrp libvirtd
+echo Installing uvtool to provide a nice frontend for kvm
+
+sudo apt-add-repository -y ppa:snappy-dev/tools
+sudo apt-get -q update
+sudo apt-get -y -q install uvtool
+
 
 # if we don't have a ssh-key then add it
 if [[ ! -f ~/.ssh/id_rsa.pub ]]; then
@@ -17,20 +20,15 @@ if [[ ! -f ~/.ssh/id_rsa.pub ]]; then
 fi
 
 # download the images
+echo Downloading the ubuntu core image; this may take a little while.
+
 uvt-simplestreams-libvirt sync --snappy flavor=core release=devel
 
 # install docker
 
-[ -e /usr/lib/apt/methods/https ] || {
-  apt-get update
-  apt-get install -y apt-transport-https
-}
+curl -sSL https://get.docker.com/ubuntu/ | sudo sh
 
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys
-sudo sh -c "echo deb https://get.docker.com/ubuntu docker main\
-> /etc/apt/sources.list.d/docker.list"
-sudo apt-get update
-sudo apt-get install -y lxc-docker
+
 
 # Setup User to not need to "sudo" when calling docker
 
@@ -38,3 +36,24 @@ sudo groupadd docker
 sudo gpasswd -a ${USER} docker
 sudo service docker restart
 
+# Have docker listen on the private network address (192.168.122.1) as
+# well as the socket
+
+sudo service docker stop
+sudo sh -c 'echo DOCKER_OPTS=\"-H tcp://192.168.122.1:4243 -H unix:///var/run/docker.sock\" >> /etc/default/docker'
+sudo service docker start
+
+# install go
+
+sudo apt-get install -q -y golang-go golang-go.tools
+
+# set up environment stuff
+sudo sh -c 'cat > /etc/profile.d/golang-env.sh' <<EOF
+export GOROOT=/usr/share/go
+export GOPATH=\${GOROOT}
+export PATH=\${PATH}:\${GOROOT}/bin
+EOF
+
+. /etc/profile.d/golang-env.sh
+
+sudo GOPATH=$GOPATH go get -u github.com/docker/swarm
