@@ -27,24 +27,19 @@ that updates are installed:
 
 1. Install uv-tool (from directions located at
    [Snappy Ubuntu Core and uvtool](http://ubuntu-smoser.blogspot.com/2014/12/snappy-ubuntu-core-and-uvtool.html)):
-
-```
-    sudo apt-add-repository ppa:snappy-dev/tools
-    sudo apt-get update
-    sudo apt-get -y install uvtool
-```
-
+    ```
+        sudo apt-add-repository ppa:snappy-dev/tools
+        sudo apt-get update
+        sudo apt-get -y install uvtool
+    ```
 2. If you don't have a `~/.ssh/id_rsa.pub` then:
-
-```
-    ssh-keygen
-```
-
+    ```
+        ssh-keygen
+    ```
 3. Download the images
-
-```
-    uvt-simplestreams-libvirt sync --snappy flavor=core release=devel
-```
+    ```
+        uvt-simplestreams-libvirt sync --snappy flavor=core release=devel
+    ```
 
 ### Install Docker
 
@@ -53,54 +48,45 @@ set of repositories than the "default". These instructions follow the
 Docker on Ubuntu [installation instructions](https://docs.docker.com/installation/ubuntulinux/).
 
 1. Do the "easy" install:
-
-```
-    curl -sSL https://get.docker.com/ubuntu/ | sudo sh
-```
-
+    ```
+        curl -sSL https://get.docker.com/ubuntu/ | sudo sh
+    ```
 2. To eliminate the need to `sudo` every time you run `docker` do the
    following:
-
-> Note: there is a potential security issue; see
-> [Docker Daemon Attack Surface](https://docs.docker.com/articles/security/#dockersecurity-daemon)
-> for details.
-
-```
-    sudo groupadd docker
-    sudo gpasswd -a ${USER} docker
-    sudo service docker restart
-```
-
-5. Modify the Docker start script to bind to a port on the private
+    > Note: there is a potential security issue; see
+    > [Docker Daemon Attack Surface](https://docs.docker.com/articles/security/#dockersecurity-daemon)
+    > for details.
+    ```
+        sudo groupadd docker
+        sudo gpasswd -a ${USER} docker
+        sudo service docker restart
+    ```
+3. Modify the Docker start script to bind to a port on the private
    network in addition to the file socket:
-
-```
-   sudo service docker stop
-   sudo sh -c 'echo DOCKER_OPTS=\"-H tcp://192.168.122.1:4243 -H unix:///var/run/docker.sock\" >> /etc/default/docker'
-   sudo service docker start
-``` 
+    ```
+       sudo service docker stop
+       sudo sh -c 'echo DOCKER_OPTS=\"-H tcp://192.168.122.1:4243 -H unix:///var/run/docker.sock\" >> /etc/default/docker'
+       sudo service docker start
+    ``` 
 
 ### Install and Configure go
 
 1. Install the go binaries:
-
-```
-    sudo apt-get install -y golang-go golang-go.tools
-```
-
+    ```
+        sudo apt-get install -y golang-go golang-go.tools
+    ```
 2. Configure the environment.  We're going to set up some global
    variables and ensure that they're loaded into subsequent shell
    sessions:
+    ```
+	    sudo sh -c "cat > /etc/profile.d/golang-env.sh" <<EOF
+       	export GOROOT=/usr/share/go
+	    export GOPATH=\${GOROOT}
+	    export PATH=\${PATH}:\${GOROOT}/bin
+	    EOF
 
-```
-	sudo sh -c "cat > /etc/profile.d/golang-env.sh" <<EOF
-	export GOROOT=/usr/share/go
-	export GOPATH=\${GOROOT}
-	export PATH=\${PATH}:\${GOROOT}/bin
-	EOF
-
-	. /etc/profile.d/golang-env.sh
-```
+	    . /etc/profile.d/golang-env.sh
+    ```
 
 ### Install swarm
 
