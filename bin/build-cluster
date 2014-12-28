@@ -1,0 +1,28 @@
+#!/bin/bash
+
+BASEDIR=$(readlink -f $(dirname $(readlink -f $0))/..)
+
+CLUSTER_SIZE=${CLUSTER_SIZE:=$1}
+SWARM_HOST=${SWARM_HOST:=$2}
+CLUSTER_NAME=${CLUSTER_NAME:=swarm}
+
+if [[ -z "$SWARM_HOST" ]]; then
+    SWARM_HOST="$(ifconfig virbr0|grep 'inet addr'|awk '{print $1}'|sed -e 's/addr://'):2375"
+fi
+
+# set both variables because different versions of swarm exist
+export SWARM_TOKEN=`swarm create`
+export SWARM_DISCOVERY=token://${SWARM_TOKEN}
+
+for i in $(seq ${CLUSTER_SIZE})
+do
+    export NODE_NAME="${CLUSTER_NAME}${i}"
+    ${BASEDIR}/bin/prep-node 
+done
+
+nohup swarm manage >/dev/null 2>&1 &
+
+echo Swarm Created
+echo DISCOVERY_ID=${SWARM_DISCOVERY}
+echo Cluster Address: ${SWARM_HOST}
+swarm list

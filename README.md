@@ -104,3 +104,21 @@ Logout and log back in to ensure all the environment settings are
 captured.
 
 ## Prepare the swarm
+
+In order to create our swarm, run `bin/create-cluster N` where `N` is
+the number of members in the swarm.
+
+`etc/config` is used to override any parameters for the swarm members.
+By default a member has the following properties:
+
+| Property | Default Value | Notes |
+| -------- | ------------- | ----- |
+| cpu      | 1             | Number of Cores |
+| memory   | 512           | Amount of system RAM in MB |
+| disk     | 8             | Size of the OS disk in GB |
+| log-console-output | STDOUT | Log output to a disk file on the host instead of STDOUT |
+| unsafe-caching | false | Do not flush guest syncs to the host on the OS disk. This can improve guest I/O performance at the cost of losing data on host power  failure.   This  option  is  useful  for  ephemeral guest machines that do not need to be persistent beyond a  host  power cycle. |
+| bridge | none | Replace the first  defined  NIC  with one that connects to the given host bridge. |
+
+
+

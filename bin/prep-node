@@ -1,38 +1,49 @@
 #!/bin/bash
 
-node=$1
-TOKEN=$2
+BASEDIR=$(readlink -f $(dirname $(readlink -f $0))/..)
 
-echo "Creating $node (this may take a little while)."
-uvt-kvm create --wait $node flavor=core
+node-name=${NODE_NAME:=$1}
+TOKEN=${SWARM_TOKEN:=$2}
+CFG_FILE=${NODE_CFG:=$3}
 
-echo "Installing docker on $node"
-uvt-kvm ssh $node "snappy install docker"
+if [[ -z "$CFG_FILE" ]]; then
+    CFG_FILE=${BASEDIR}/etc/node.config
+fi
+
+ARGS=""
+
+. ${CFG_FILE}
+
+echo "Creating $node-name (this may take a little while)."
+uvt-kvm create $--wait ${ARGS} node-name flavor=core
+
+echo "Installing docker on $node-name"
+uvt-kvm ssh $node-name "snappy install docker"
 
 echo re-configuring the docker daemon to listen on a port
 
-IP=`uvt-kvm ip $node`
-version=`uvt-kvm ssh $node snappy versions|grep docker|awk '{print $3}'`
+IP=`uvt-kvm ip $node-name`
+version=`uvt-kvm ssh $node-name snappy versions|grep docker|awk '{print $3}'`
 cfg="DOCKER_OPTIONS=\'-H tcp://${IP}:4243\'"
-uvt-kvm ssh $node  "sudo sh -c \"echo $cfg >> /apps/docker/current/etc/docker.conf\""
+uvt-kvm ssh $node-name  "sudo sh -c \"echo $cfg >> /apps/docker/current/etc/docker.conf\""
 
 echo restarting docker daemon
-uvt-kvm ssh $node "sudo systemctl restart docker_docker_${version}.service"
+uvt-kvm ssh $node-name "sudo systemctl restart docker_docker_${version}.service"
 
 echo installing swarm
-package=`uvt-kvm ssh $node snappy search swarm |awk '{print $1}'|tail -1`
-uvt-kvm ssh $node "snappy install $package"
+package=`uvt-kvm ssh $node-name snappy search swarm |awk '{print $1}'|tail -1`
+uvt-kvm ssh $node-name "snappy install $package"
 
 # this is a hack to fix the current package
 
 if [[ "${package}" != "snappy" ]]; then
-    uvt-kvm ssh $node sudo "ln -s /apps/$package /apps/swarm"
-    for i in `uvt-kvm ssh $node ls snappy-bin|grep ${package}|sed -e "s/${package}.//"` 
+    uvt-kvm ssh $node-name sudo "ln -s /apps/$package /apps/swarm"
+    for i in `uvt-kvm ssh $node-name ls snappy-bin|grep ${package}|sed -e "s/${package}.//"` 
     do 
-         uvt-kvm ssh $node "ln -s \${HOME}/snappy-bin/${package}.${i} \${HOME}/snappy-bin/swarm.${i}" 
+         uvt-kvm ssh $node-name "ln -s \${HOME}/snappy-bin/${package}.${i} \${HOME}/snappy-bin/swarm.${i}" 
     done
 fi
 
-# register the node with the swarm
+# register the node-name with the swarm
 
-uvt-kvm ssh $node "nohup /home/ubuntu/snappy-bin/swarm.join --token ${TOKEN} --addr ${IP}:4243 >/dev/null 2>&1 &"
+uvt-kvm ssh $node-name "nohup /home/ubuntu/snappy-bin/swarm.join --token ${TOKEN} --addr ${IP}:4243 >/dev/null 2>&1 &"
