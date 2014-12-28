@@ -35,4 +35,4 @@ fi
 
 # register the node with the swarm
 
-uvt-kvm ssh $node "nohup swarm.join --token ${TOKEN} --addr ${IP}:4243 &"
+uvt-kvm ssh $node "nohup '/home/ubuntu/snappy-bin/swarm.join --token ${TOKEN} --addr ${IP}:4243' &"
